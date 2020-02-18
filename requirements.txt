@@ -1,0 +1,4 @@
+fdk
+httpsig_cffi
+requests
+six
