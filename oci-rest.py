@@ -89,18 +89,19 @@ class SignedRequestAuth(requests.auth.AuthBase):
         request.headers.update(signed_headers)
         return request
 
-
+with open("./env.json") as f:
+    env = json.load(f)
 # -----BEGIN RSA PRIVATE KEY-----
 # ...
 # -----END RSA PRIVATE KEY-----
-with open("") as f:
+with open(env["api_key"]) as f:
     private_key = f.read().strip()
 
 # This is the keyId for a key uploaded through the console
 api_key = "/".join([
-    "ocid1.tenancy.oc1...",
-    "ocid1.user.oc1...",
-    ""
+    env["tenancy"],
+    env["oci_user"],
+    env["fingerprint"]
 ])
 
 auth = SignedRequestAuth(api_key, private_key)
@@ -154,13 +155,13 @@ headers = {
 # print(response.request.headers["Authorization"])
 
 # Invoke Fn
-# uri = "https://.us-ashburn-1.functions.oci.oraclecloud.com/20181201/functions/ocid1.fnfunc.oc1.iad./actions/invoke"
+uri = env["fn_uri"]
 
-# response = requests.post(uri, auth=auth, headers=headers)
-# print(response.text)
+response = requests.post(uri, auth=auth, headers=headers)
+print(response.text)
 
 # Get Job Status
-# auth = ('aleksandar.kocic@oracle.com','password')
+# auth = (env["user"], env["password"])
 # headers = {
 #     "content-type": "application/json",
 #     "X-ID-TENANT-NAME": "idcs-",
@@ -169,94 +170,3 @@ headers = {
 # uri = "https://jaas.oraclecloud.com//paas/api/v1.1/activitylog/idcs-/job/185255292"
 # http_response = requests.get(uri, auth=auth, headers=headers)
 # print(http_response.text)
-
-# Function test
-shape_down = "VM.Standard2.1"
-shape_up = "VM.Standard2.2"
-hosts = "testjcs-wls-1"
-
-auth = ('aleksandar.kocic@oracle.com','password')
-headers = {
-    "content-type": "application/json",
-    "X-ID-TENANT-NAME": "idcs-",
-}
-
-# print(time.strftime("%m/%d/%YT%H:%M:%S", time.gmtime()))
-
-# gmtime = time.gmtime()
-# print(gmtime)
-# print(gmtime.tm_zone)
-
-scheduled_time = "20:20:00"
-scheduled_time_split = scheduled_time.split(":")
-hour=int(scheduled_time_split[0])
-
-days = 0
-if(hour == 0):
-  days = 1
-minute=int(scheduled_time_split[1])
-second=int(scheduled_time_split[2])
-
-NOW = datetime.now()
-TODAY = date.today()
-
-SCHEDULED = TODAY + relativedelta(days=+days, hour=hour, minute=minute, second=second)
-NOW = TODAY + relativedelta(days=+days, hour=hour, minute=minute+5, second=second)
-print(NOW)
-print(SCHEDULED)
-difference = relativedelta(NOW, SCHEDULED)
-print(difference.hours, difference.minutes, difference.seconds)
-seconds = abs(difference.seconds + difference.minutes*60 + difference.hours*3600)
-print(seconds)
-if seconds <= 300:
-  print("Done")
-
-# scheduled_time_split = scheduled_time.split(":")
-# t = (gmtime.tm_year, gmtime.tm_mon, gmtime.tm_mday, int(scheduled_time_split[0]), int(scheduled_time_split[1]), int(scheduled_time_split[2]), gmtime.tm_wday, gmtime.tm_yday, gmtime.tm_isdst)
-
-# current_time = calendar.timegm(gmtime)
-# st_str = time.localtime(int(time.mktime(t)))
-# print(st_str)
-# print(st_str.tm_zone)
-# st_str = time.gmtime(int(time.mktime(t)))
-# print(st_str)
-# print(st_str.tm_zone)
-
-# print(st_str.tm_year)
-# print(st_str.tm_mon)
-# print(st_str.tm_mday)
-# print(st_str.tm_hour)
-# print(st_str.tm_min)
-# print(st_str.tm_sec)
-# scheduled_time = int(time.mktime(t))
-# print(current_time - scheduled_time)
-
-# if abs(current_time - scheduled_time) < int('300'):
-#   uri = "https://jaas.oraclecloud.com/paas/api/v1.1/instancemgmt/idcs-/services/jaas/instances/testjcs"
-#   http_response = requests.get(uri, auth=auth, headers=headers)
-#   host = hosts.split(",")[0]
-#   shape = (http_response.json())["components"]["WLS"]["vmInstances"][host]["shapeId"]
-
-#   if shape_down == shape:
-#       shape = shape_up
-#   else:
-#       shape = shape_down
-
-#   uri = "https://jaas.oraclecloud.com/paas/api/v1.1/instancemgmt/idcs-/services/jaas/instances/testjcs/hosts/scale"
-#   payload = """
-#   {
-#   "components": {
-#       "WLS": {
-#       "hosts": [],
-#       "shape": "",
-#       "ignoreManagedServerHeapError": true
-#       }
-#   }
-#   }
-#   """
-
-#   data = json.loads(payload)
-#   data["components"]["WLS"]["hosts"] = hosts.split(",")
-#   data["components"]["WLS"]["shape"] = shape
-#   http_response = requests.post(uri, auth=auth, headers=headers, data=json.dumps(data))
-#   print(http_response.text)
