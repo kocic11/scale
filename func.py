@@ -70,7 +70,7 @@ def scale(ctx):
   
   if fireFn(scheduled_time, time_interval):
     # Get current JCS nstance shape
-    uri = "https://jaas.oraclecloud.com/paas/api/v1.1/instancemgmt/idcs-829b09c9d34b49be834b77b362810001/services/jaas/instances/testjcs"
+    uri = "https://jaas.oraclecloud.com/paas/api/v1.1/instancemgmt/" + tenancy + "/services/jaas/instances/" + jcsinstance
     http_response = requests.get(uri, auth=auth, headers=headers)
     host = hosts.split(",")[0]
     shape = (http_response.json())["components"]["WLS"]["vmInstances"][host]["shapeId"]
