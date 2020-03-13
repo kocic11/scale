@@ -13,9 +13,14 @@ import requests
 import six
 from dateutil.relativedelta import *
 from fdk import response
+from fdk.response import Response
+
+log_level = "DEBUG"
 
 def __fireFn(scheduled_time, time_interval):
   logger = logging.getLogger(__name__)
+  logger.setLevel(log_level)
+  logger.debug("__fireFn started.")
   scheduled_time_split = scheduled_time.split(":")
   hour=int(scheduled_time_split[0])
 
@@ -27,20 +32,22 @@ def __fireFn(scheduled_time, time_interval):
   second=int(scheduled_time_split[2])
 
   NOW = datetime.utcnow()
-  logger.info("NOW: %s", NOW)
+  logger.debug("NOW: \t\t%s", NOW)
   TODAY = date.fromtimestamp(NOW.timestamp())
 
   SCHEDULED = TODAY + relativedelta(days=+days, hour=hour, minute=minute, second=second)
-  logger.info("SCHEDULED: %s", SCHEDULED)
+  logger.debug("SCHEDULED: \t%s", SCHEDULED)
   
   difference = relativedelta(NOW, SCHEDULED)
-  logger.info("%s %s %s", difference.hours, difference.minutes, difference.seconds)
+  logger.debug("Scheduled to run in %s:%s:%s", abs(difference.hours), abs(difference.minutes), abs(difference.seconds))
   seconds = abs(difference.seconds + difference.minutes*60 + difference.hours*3600)
-  
+  logger.debug("__fireFn ended.")
   return abs(seconds) < int(time_interval)
 
 def scale(ctx):
   logger = logging.getLogger(__name__)
+  logger.setLevel(log_level)
+  logger.debug("Scale started.")
   payload = """
     {
       "components": {
@@ -52,7 +59,6 @@ def scale(ctx):
       }
     }
   """
-
   config = ctx.Config()
   user = config.get("user")
   password = config.get("password")
@@ -70,12 +76,12 @@ def scale(ctx):
     "content-type": "application/json",
     "X-ID-TENANT-NAME": tenancy
   }
-  
+  response = Response(ctx, response_data="Noop") 
   if __fireFn(scheduled_time, time_interval):
     # Get current JCS nstance shape
     uri = "https://jaas.oraclecloud.com/paas/api/v1.1/instancemgmt/" + tenancy + "/services/jaas/instances/" + jcsinstance
     http_response = requests.get(uri, auth=auth, headers=headers)
-    logger.info("Response status: %i", http_response.status_code)
+    logger.debug("Response status: %i", http_response.status_code)
     host = hosts.split(",")[0]
     if http_response.status_code == requests.codes.OK:
       shape = (http_response.json())["components"]["WLS"]["vmInstances"][host]["shapeId"]
@@ -92,15 +98,21 @@ def scale(ctx):
       data["components"]["WLS"]["hosts"] = hosts.split(",")
       data["components"]["WLS"]["shape"] = shape
     
-      result = requests.post(uri, auth=auth, headers=headers, data=json.dumps(data)).json()
-      logger.info("Response status: %i", result.status_code)
-      return response.Response(ctx, response_data=result, headers={"Content-Type": "application/json"})
-  logger.info("Scale ended")
-  return response.Response(ctx, response_data=None, headers={"Content-Type": "application/json"}) 
+      result = requests.post(uri, auth=auth, headers=headers, data=json.dumps(data))
+      logger.debug("Response status: %s", result.status_code)
+      response = Response(ctx, response_data=result.json(), headers={"Content-Type": "application/json"}, status_code=result.status_code)
+  logger.debug("Scale ended.")
+  return response
 
 def handler(ctx, data: io.BytesIO = None):
+  global log_level
+  config = ctx.Config()
+  log_level = config.get("log_level")
   logger = logging.getLogger(__name__)
-  logger.info("Function started")
+  logger.setLevel(log_level)
+  logger.debug("Function started")
   response = scale(ctx)
-  logger.info("Function ended. Response status code is %i", response.status_code)
+  logger.debug("Response status code is %s", response.status())
+  logger.debug("Response is %s", response.body())
+  logger.debug("Function ended.")
   return response
