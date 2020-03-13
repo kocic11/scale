@@ -32,14 +32,19 @@ def __fireFn(scheduled_time, time_interval):
   second=int(scheduled_time_split[2])
 
   NOW = datetime.utcnow()
-  logger.debug("NOW: \t\t%s", NOW)
+  logger.debug("NOW: \t\t%s", NOW.strftime("%Y-%m-%d %H:%M:%S"))
   TODAY = date.fromtimestamp(NOW.timestamp())
 
   SCHEDULED = TODAY + relativedelta(days=+days, hour=hour, minute=minute, second=second)
   logger.debug("SCHEDULED: \t%s", SCHEDULED)
-  
-  difference = relativedelta(NOW, SCHEDULED)
-  logger.debug("Scheduled to run in %s:%s:%s", abs(difference.hours), abs(difference.minutes), abs(difference.seconds))
+  if NOW < SCHEDULED:
+    difference = relativedelta(SCHEDULED, NOW)
+    logger.debug("Scheduled to run in %s hour(s), %s minute(s), and %s second(s)", difference.hours, difference.minutes, difference.seconds)
+  else:
+    SCHEDULED = SCHEDULED + relativedelta(days=+1)
+    difference = relativedelta(SCHEDULED, NOW)
+    logger.debug("Scheduled to run in hour(s), %s minute(s), and %s second(s)", difference.hours, difference.minutes, difference.seconds)
+
   seconds = abs(difference.seconds + difference.minutes*60 + difference.hours*3600)
   logger.debug("__fireFn ended.")
   return abs(seconds) < int(time_interval)
